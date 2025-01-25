@@ -11,7 +11,7 @@ local function createElement(className, properties)
         element[prop] = value
     end
     return element
-end 
+end
 
 -- Begin a new window
 function ImGui:Begin(name, position, size)
