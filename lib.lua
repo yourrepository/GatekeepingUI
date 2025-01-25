@@ -1,106 +1,116 @@
--- Simple Roblox ImGui-style UI Library
+-- Simple Roblox ImGui Styled UI Library
 local ImGui = {}
 
--- Create a table to track open windows
-ImGui.Windows = {}
-
--- Helper function to create GUI elements
-local function createElement(className, properties)
-    local element = Instance.new(className)
-    for prop, value in pairs(properties) do
-        element[prop] = value
-    end
-    return element
+-- Create a new ScreenGui
+function ImGui:CreateScreenGui()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ImGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    return screenGui
 end
 
--- Begin a new window
-function ImGui:Begin(name, position, size)
-    -- Check if the window already exists
-    local window = self.Windows[name]
-    if not window then
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = name
-        screenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+-- Create a draggable frame
+function ImGui:CreateWindow(name, position, size)
+    local window = Instance.new("Frame")
+    window.Name = name or "Window"
+    window.Size = size or UDim2.new(0, 300, 0, 200)
+    window.Position = position or UDim2.new(0.5, -150, 0.5, -100)
+    window.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    window.BorderSizePixel = 0
+    window.AnchorPoint = Vector2.new(0.5, 0.5)
 
-        local frame = createElement("Frame", {
-            Name = "MainFrame",
-            Position = UDim2.new(0, position.X, 0, position.Y),
-            Size = UDim2.new(0, size.X, 0, size.Y),
-            BackgroundColor3 = Color3.fromRGB(45, 45, 45),
-            BorderSizePixel = 0,
-        })
-        frame.Parent = screenGui
+    -- Draggable header
+    local header = Instance.new("TextLabel")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 25)
+    header.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    header.Text = name or "Window"
+    header.TextColor3 = Color3.new(1, 1, 1)
+    header.Font = Enum.Font.SourceSans
+    header.TextSize = 18
+    header.BorderSizePixel = 0
+    header.Parent = window
 
-        self.Windows[name] = {
-            ScreenGui = screenGui,
-            Frame = frame,
-            YOffset = 10
-        }
-    end
-    return self.Windows[name].Frame
+    -- Enable dragging
+    local dragging = false
+    local dragStart, startPos
+
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = window.Position
+        end
+    end)
+
+    header.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            window.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    return window
 end
 
--- End the current window
-function ImGui:End(name)
-    local window = self.Windows[name]
-    if window then
-        window.YOffset = 10 -- Reset Y offset for the next frame
-    end
+-- Create a button
+function ImGui:CreateButton(parent, text, position, size, callback)
+    local button = Instance.new("TextButton")
+    button.Size = size or UDim2.new(0, 100, 0, 30)
+    button.Position = position or UDim2.new(0, 10, 0, 10)
+    button.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+    button.Text = text or "Button"
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.Font = Enum.Font.SourceSans
+    button.TextSize = 16
+    button.BorderSizePixel = 0
+    button.Parent = parent
+
+    button.MouseButton1Click:Connect(function()
+        if callback then
+            callback()
+        end
+    end)
+
+    return button
 end
 
--- Add a text label to the window
-function ImGui:Text(name, text)
-    local window = self.Windows[name]
-    if window then
-        local label = createElement("TextLabel", {
-            Size = UDim2.new(1, -20, 0, 20),
-            Position = UDim2.new(0, 10, 0, window.YOffset),
-            BackgroundTransparency = 1,
-            Text = text,
-            TextColor3 = Color3.fromRGB(255, 255, 255),
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Font = Enum.Font.SourceSans,
-            TextSize = 18,
-        })
-        label.Parent = window.Frame
+-- Create a label
+function ImGui:CreateLabel(parent, text, position, size)
+    local label = Instance.new("TextLabel")
+    label.Size = size or UDim2.new(0, 200, 0, 30)
+    label.Position = position or UDim2.new(0, 10, 0, 50)
+    label.BackgroundTransparency = 1
+    label.Text = text or "Label"
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 16
+    label.Parent = parent
 
-        window.YOffset = window.YOffset + 25 -- Update Y offset for next element
-    end
+    return label
 end
 
--- Add a button to the window
-function ImGui:Button(name, buttonText, callback)
-    local window = self.Windows[name]
-    if window then
-        local button = createElement("TextButton", {
-            Size = UDim2.new(1, -20, 0, 30),
-            Position = UDim2.new(0, 10, 0, window.YOffset),
-            BackgroundColor3 = Color3.fromRGB(65, 65, 65),
-            Text = buttonText,
-            TextColor3 = Color3.fromRGB(255, 255, 255),
-            Font = Enum.Font.SourceSans,
-            TextSize = 18,
-            AutoButtonColor = false,
-        })
-        button.Parent = window.Frame
+-- Example usage
+local gui = ImGui:CreateScreenGui()
+local window = ImGui:CreateWindow("Example Window")
+window.Parent = gui
 
-        button.MouseButton1Click:Connect(function()
-            if callback then
-                callback()
-            end
-        end)
+ImGui:CreateButton(window, "Click Me", UDim2.new(0, 10, 0, 40), UDim2.new(0, 100, 0, 30), function()
+    print("Button clicked!")
+end)
 
-        window.YOffset = window.YOffset + 35 -- Update Y offset for next element
-    end
-end
-
--- Destroy a window
-function ImGui:Destroy(name)
-    local window = self.Windows[name]
-    if window then
-        window.ScreenGui:Destroy()
-        self.Windows[name] = nil
-    end
-end
+ImGui:CreateLabel(window, "Hello, ImGui!", UDim2.new(0, 10, 0, 80))
 
 return ImGui
